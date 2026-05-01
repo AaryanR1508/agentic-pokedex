@@ -1,0 +1,63 @@
+services:
+  frontend:
+    build: 
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - rag_network
+
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - CHROMA_HOST=chromadb
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+    depends_on:
+      - chromadb
+      - neo4j
+    networks:
+      - rag_network
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000" # Mapped to 8001 on host to avoid FastAPI clash
+    volumes:
+      - chroma_data:/chroma/chroma
+    networks:
+      - rag_network
+
+  neo4j:
+    image: neo4j:5.12.0
+    ports:
+      - "7474:7474" # HTTP GUI
+      - "7687:7687" # Bolt port
+    environment:
+      - NEO4J_AUTH=neo4j/password
+    volumes:
+      - neo4j_data:/data
+    networks:
+      - rag_network
+
+networks:
+  rag_network:
+    driver: bridge
+
+volumes:
+  chroma_data:
+  neo4j_data:
