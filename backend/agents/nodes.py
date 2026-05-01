@@ -42,7 +42,7 @@ async def audio_handler_node(state: AgentState) -> Dict[str, Any]:
             {
                 "type": "file",
                 "source_type": "base64",
-                "mime_type": "audio/ogg",
+                "mime_type": state.get("audio_mime_type", "audio/ogg"),
                 "data": audio_base64,
             },
         ]
@@ -60,6 +60,11 @@ async def audio_handler_node(state: AgentState) -> Dict[str, Any]:
     await neo4j_client.close()
 
     if pokemon_data:
+        graph_relationships = []
+        if "evolutions" in pokemon_data and pokemon_data["evolutions"]:
+            graph_relationships.extend([f"Evolves to {e.title()}" for e in pokemon_data["evolutions"]])
+        pokemon_data["graph_relationships"] = graph_relationships
+        
         return {
             "extracted_entity": pokemon_name,
             "retrieved_context": pokemon_data
@@ -99,6 +104,11 @@ async def image_handler_node(state: AgentState) -> Dict[str, Any]:
     await neo4j_client.close()
 
     if pokemon_data:
+        graph_relationships = []
+        if "evolutions" in pokemon_data and pokemon_data["evolutions"]:
+            graph_relationships.extend([f"Evolves to {e.title()}" for e in pokemon_data["evolutions"]])
+        pokemon_data["graph_relationships"] = graph_relationships
+        
         return {
             "extracted_entity": pokemon_name,
             "retrieved_context": pokemon_data
@@ -159,6 +169,17 @@ async def text_handler_node(state: AgentState) -> Dict[str, Any]:
     if pokemon_name:
         pokemon_data = await neo4j_client.get_pokemon_details(pokemon_name)
         if pokemon_data:
+            graph_relationships = []
+            if "evolutions" in pokemon_data and pokemon_data["evolutions"]:
+                graph_relationships.extend([f"Evolves to {e.title()}" for e in pokemon_data["evolutions"]])
+            
+            if intent == "type_effectiveness":
+                strong_against = await neo4j_client.get_type_effectiveness(pokemon_name)
+                if strong_against:
+                    graph_relationships.append(f"Strong against {', '.join(strong_against).title()}")
+            
+            pokemon_data["graph_relationships"] = graph_relationships
+            
             await neo4j_client.close()
             return {
                 "extracted_entity": pokemon_name,

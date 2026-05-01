@@ -2,6 +2,7 @@ import io
 from typing import Optional
 
 import chromadb
+import numpy as np
 from chromadb.utils import embedding_functions
 from PIL import Image
 
@@ -26,7 +27,7 @@ class ChromaSeeder:
     def create_collections(self):
         openclip_ef = embedding_functions.OpenCLIPEmbeddingFunction(
             model_name="ViT-B-32",
-            pretrained="laion2b_s34b_b79k",
+            checkpoint="laion2b_s34b_b79k",
         )
 
         self.text_collection = self.client.get_or_create_collection(
@@ -96,7 +97,8 @@ class ChromaSeeder:
         for pokemon in pokemon_list:
             if pokemon.sprite_bytes:
                 ids.append(pokemon.name)
-                images.append(pokemon.sprite_bytes)
+                img = Image.open(io.BytesIO(pokemon.sprite_bytes))
+                images.append(np.array(img))
                 metadatas.append({
                     "name": pokemon.name,
                     "id": pokemon.id,

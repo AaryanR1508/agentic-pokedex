@@ -14,9 +14,10 @@ class Neo4jClient:
         MATCH (p:Pokemon {name: $name})
         OPTIONAL MATCH (p)-[:HAS_TYPE]->(t:Type)
         OPTIONAL MATCH (p)-[:EVOLVES_TO]->(evo:Pokemon)
-        RETURN p.name as name, p.hp as hp, p.attack as attack,
-               p.defense as defense, p.special_attack as special_attack,
-               p.special_defense as special_defense, p.speed as speed,
+        RETURN p.name as name, p.id as id, p.hp as hp, p.attack as attack,
+               p.defense as defense, p.sp_atk as sp_atk,
+               p.sp_def as sp_def, p.speed as speed,
+               p.flavor_text as flavor_text,
                p.sprite_url as sprite_url, collect(DISTINCT t.name) as types,
                collect(DISTINCT evo.name) as evolutions
         """

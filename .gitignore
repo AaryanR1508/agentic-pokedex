@@ -38,6 +38,7 @@ yarn-error.log*
 # =========================
 neo4j_data/
 chroma_data/
+.cache/
 
 # =========================
 # OS & IDE

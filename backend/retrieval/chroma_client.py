@@ -13,17 +13,20 @@ class ChromaClient:
         )
 
     def search_image(self, image_bytes: bytes) -> Optional[str]:
-        from chromadb.api.models.Collection import EmbeddingFunction
+        from chromadb.utils import embedding_functions
+
+        openclip_ef = embedding_functions.OpenCLIPEmbeddingFunction(
+            model_name="ViT-B-32",
+            pretrained="laion2b_s34b_b79k",
+        )
 
         collection = self.client.get_or_create_collection(
             "pokemon_images",
-            embedding_function="openclip"
+            embedding_function=openclip_ef
         )
 
-        image_base64 = base64.b64encode(image_bytes).decode("utf-8")
-
         results = collection.query(
-            query_images=[image_base64],
+            images=[image_bytes],
             n_results=1
         )
 
@@ -36,8 +39,7 @@ class ChromaClient:
 
     def search_text(self, query: str) -> Optional[str]:
         collection = self.client.get_or_create_collection(
-            "pokemon_text",
-            embedding_function="openclip"
+            "pokemon_text"
         )
 
         results = collection.query(
@@ -52,8 +54,7 @@ class ChromaClient:
 
     def get_pokemon_info_by_name(self, name: str) -> Optional[dict]:
         collection = self.client.get_or_create_collection(
-            "pokemon_images",
-            embedding_function="openclip"
+            "pokemon_text"
         )
 
         results = collection.get(where={"name": name})

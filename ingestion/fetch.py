@@ -109,13 +109,13 @@ class PokeAPIFetcher:
         cache_file = CACHE_DIR / f"evolution_{cache_file_name}.json"
         if cache_file.exists():
             data = json.loads(cache_file.read_text())
-            evolutions = parse_evolution_chain(data)
+            evolutions = parse_evolution_chain(data["chain"])
             self.evolution_cache[url] = evolutions
             return evolutions
 
         data = await self._get(url)
         cache_file.write_text(json.dumps(data))
-        evolutions = parse_evolution_chain(data)
+        evolutions = parse_evolution_chain(data["chain"])
         self.evolution_cache[url] = evolutions
         return evolutions
 

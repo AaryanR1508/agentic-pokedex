@@ -5,6 +5,7 @@ class AgentState(TypedDict):
     text_query: Optional[str]
     image_bytes: Optional[bytes]
     audio_bytes: Optional[bytes]
+    audio_mime_type: Optional[str]
     modality: Optional[str]
     extracted_entity: Optional[str]
     intent: Optional[str]

@@ -26,6 +26,7 @@ async def process_multimodal_query(
         "text_query": text,
         "image_bytes": image_bytes,
         "audio_bytes": audio_bytes,
+        "audio_mime_type": audio.content_type if audio else None,
         "modality": None,
         "extracted_entity": None,
         "intent": None,
@@ -37,17 +38,19 @@ async def process_multimodal_query(
 
     context_used = ContextData(
         pokemon_name=result.get("extracted_entity"),
+        pokemon_id=result.get("retrieved_context", {}).get("id"),
+        flavor_text=result.get("retrieved_context", {}).get("flavor_text"),
         stats={
             "hp": result.get("retrieved_context", {}).get("hp"),
             "attack": result.get("retrieved_context", {}).get("attack"),
             "defense": result.get("retrieved_context", {}).get("defense"),
-            "special_attack": result.get("retrieved_context", {}).get("special_attack"),
-            "special_defense": result.get("retrieved_context", {}).get("special_defense"),
+            "sp_atk": result.get("retrieved_context", {}).get("sp_atk"),
+            "sp_def": result.get("retrieved_context", {}).get("sp_def"),
             "speed": result.get("retrieved_context", {}).get("speed"),
         },
         types=result.get("retrieved_context", {}).get("types"),
         sprite_url=result.get("retrieved_context", {}).get("sprite_url"),
-        graph_relationships=result.get("retrieved_context", {}).get("evolutions"),
+        graph_relationships=result.get("retrieved_context", {}).get("graph_relationships"),
     )
 
     return QueryResponse(
