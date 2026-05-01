@@ -1,0 +1,16 @@
+[project]
+name = "pokedex-ingestion"
+version = "0.1.0"
+description = "Data ingestion pipeline for Pokedex RAG application"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx",
+    "neo4j",
+    "chromadb",
+    "open-clip-torch",
+    "Pillow",
+    "python-dotenv",
+    "rich",
+    "tenacity",
+    "pydantic",
+]
