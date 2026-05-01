@@ -2,12 +2,20 @@ from typing import Optional
 
 from fastapi import FastAPI, Form, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
 from models.api import QueryResponse, ContextData
 from agents.graph import app_graph
 from agents.state import AgentState
 
 app = FastAPI(title="Agentic Pokédex API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.post("/api/v1/query", response_model=QueryResponse)

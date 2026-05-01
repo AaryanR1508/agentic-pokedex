@@ -17,7 +17,7 @@ class ChromaClient:
 
         openclip_ef = embedding_functions.OpenCLIPEmbeddingFunction(
             model_name="ViT-B-32",
-            pretrained="laion2b_s34b_b79k",
+            checkpoint="laion2b_s34b_b79k",
         )
 
         collection = self.client.get_or_create_collection(
