@@ -57,9 +57,7 @@ export const MessageBubble = ({ message, index }) => {
           </div>
         )}
 
-        <div className={`text-xs mt-1 ${isUser ? 'text-white/60' : 'text-gray-500'}`}>
-          {message.timestamp || ''}
-        </div>
+
       </div>
     </motion.div>
   );

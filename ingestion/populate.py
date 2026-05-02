@@ -51,27 +51,29 @@ async def fetch_all_data(progress: Progress) -> tuple[list[PokemonData], list[Ty
     return pokemon_data, type_effectiveness
 
 
-def verify_databases(neo4j_seeder: Neo4jSeeder, chroma_seeder: ChromaSeeder):
+def verify_databases(neo4j_seeder, chroma_seeder):
     console.print("\n[bold cyan]Running verification queries...[/bold cyan]")
 
-    neo4j_stats = neo4j_seeder.get_stats()
-    table = Table(title="Neo4j Stats")
-    table.add_column("Metric", style="cyan")
-    table.add_column("Count", style="green")
-    for key, value in neo4j_stats.items():
-        table.add_row(key, str(value))
-    console.print(table)
+    if neo4j_seeder:
+        neo4j_stats = neo4j_seeder.get_stats()
+        table = Table(title="Neo4j Stats")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Count", style="green")
+        for key, value in neo4j_stats.items():
+            table.add_row(key, str(value))
+        console.print(table)
 
-    chroma_stats = chroma_seeder.verify_collections()
-    table = Table(title="ChromaDB Stats")
-    table.add_column("Collection", style="cyan")
-    table.add_column("Count", style="green")
-    for key, value in chroma_stats.items():
-        table.add_row(key, str(value))
-    console.print(table)
+    if chroma_seeder:
+        chroma_stats = chroma_seeder.verify_collections()
+        table = Table(title="ChromaDB Stats")
+        table.add_column("Collection", style="cyan")
+        table.add_column("Count", style="green")
+        for key, value in chroma_stats.items():
+            table.add_row(key, str(value))
+        console.print(table)
 
-    text_results = chroma_seeder.test_text_search("a fire-breathing dragon", n_results=3)
-    console.print(f"\n[cyan]Text search test:[/cyan] 'a fire-breathing dragon' -> {text_results}")
+        text_results = chroma_seeder.test_text_search("a fire-breathing dragon", n_results=3)
+        console.print(f"\n[cyan]Text search test:[/cyan] 'a fire-breathing dragon' -> {text_results}")
 
     console.print("\n✓ Verification complete")
 
@@ -85,6 +87,9 @@ async def main_async(args):
 
     neo4j_seeder = None
     chroma_seeder = None
+    # Cache stats before connections are closed so the summary can use them.
+    neo4j_stats_cache = None
+    chroma_stats_cache = None
 
     try:
         if not args.chroma_only:
@@ -109,9 +114,26 @@ async def main_async(args):
                 with Progress() as progress:
                     pokemon_data, type_effectiveness = await fetch_all_data(progress)
             else:
-                console.print("[yellow]Skipping fetch - using cached data[/yellow]")
-                from fetch import CACHE_DIR
-                console.print(f"Cache directory: {CACHE_DIR}")
+                # Load PokemonData from cached JSON files instead of hitting the API.
+                console.print("[yellow]Skipping fetch - loading from cache...[/yellow]")
+                from fetch import CACHE_DIR, PokeAPIFetcher, download_all_sprites
+                semaphore = asyncio.Semaphore(10)
+                fetcher = PokeAPIFetcher(semaphore)
+                loaded = []
+                for pokemon_id in range(1, 152):
+                    poke_file = CACHE_DIR / f"pokemon_{pokemon_id}.json"
+                    species_file = CACHE_DIR / f"species_{pokemon_id}.json"
+                    if poke_file.exists() and species_file.exists():
+                        import json
+                        poke_json = json.loads(poke_file.read_text())
+                        species_json = json.loads(species_file.read_text())
+                        p = await fetcher.build_pokemon_data(poke_json, species_json)
+                        loaded.append(p)
+                await fetcher.close()
+                # Sprites are not persisted to disk — re-download them (fast, cached by OS/httpx).
+                await download_all_sprites(loaded)
+                pokemon_data = loaded
+                console.print(f"✓ Loaded {len(pokemon_data)} Pokémon from cache")
 
         if args.verify_only:
             verify_databases(neo4j_seeder, chroma_seeder)
@@ -127,6 +149,12 @@ async def main_async(args):
 
         verify_databases(neo4j_seeder, chroma_seeder)
 
+        # Capture stats while connections are still open.
+        if neo4j_seeder:
+            neo4j_stats_cache = neo4j_seeder.get_stats()
+        if chroma_seeder:
+            chroma_stats_cache = chroma_seeder.verify_collections()
+
     finally:
         if neo4j_seeder:
             neo4j_seeder.close()
@@ -141,14 +169,12 @@ async def main_async(args):
     console.print(f"[bold green]│         Ingestion Complete ✅           │[/bold green]")
     console.print(f"[bold green]├─────────────────┬───────────────────────┤[/bold green]")
     console.print(f"[bold green]│ Pokémon Fetched │ {len(pokemon_data):<25} │[/bold green]")
-    if neo4j_seeder:
-        stats = neo4j_seeder.get_stats()
-        console.print(f"[bold green]│ Neo4j Nodes     │ {stats['pokemon'] + stats['types'] + stats['abilities'] + stats['moves']:<25} │[/bold green]")
-        console.print(f"[bold green]│ Neo4j Edges     │ {stats['relationships']:<25} │[/bold green]")
-    if chroma_seeder:
-        chroma_stats = chroma_seeder.verify_collections()
-        console.print(f"[bold green]│ Chroma Texts    │ {chroma_stats['text_documents']:<25} │[/bold green]")
-        console.print(f"[bold green]│ Chroma Images   │ {chroma_stats['image_documents']:<25} │[/bold green]")
+    if neo4j_stats_cache:
+        console.print(f"[bold green]│ Neo4j Nodes     │ {neo4j_stats_cache['pokemon'] + neo4j_stats_cache['types'] + neo4j_stats_cache['abilities'] + neo4j_stats_cache['moves']:<25} │[/bold green]")
+        console.print(f"[bold green]│ Neo4j Edges     │ {neo4j_stats_cache['relationships']:<25} │[/bold green]")
+    if chroma_stats_cache:
+        console.print(f"[bold green]│ Chroma Texts    │ {chroma_stats_cache['text_documents']:<25} │[/bold green]")
+        console.print(f"[bold green]│ Chroma Images   │ {chroma_stats_cache['image_documents']:<25} │[/bold green]")
     console.print(f"[bold green]│ Time Elapsed    │ {minutes}m {seconds}s{' ' * (17 - len(f'{minutes}m {seconds}s'))}│[/bold green]")
     console.print(f"[bold green]└─────────────────┴───────────────────────┘[/bold green]")
 

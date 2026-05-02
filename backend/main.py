@@ -44,21 +44,27 @@ async def process_multimodal_query(
 
     result = await app_graph.ainvoke(initial_state)
 
+    ctx = result.get("retrieved_context", {})
+    raw_stats = {
+        "hp":      ctx.get("hp"),
+        "attack":  ctx.get("attack"),
+        "defense": ctx.get("defense"),
+        "sp_atk":  ctx.get("sp_atk"),
+        "sp_def":  ctx.get("sp_def"),
+        "speed":   ctx.get("speed"),
+    }
+    # Only pass stats when every value is present; otherwise Pydantic rejects
+    # None inside Dict[str, int].
+    stats = raw_stats if all(v is not None for v in raw_stats.values()) else None
+
     context_used = ContextData(
         pokemon_name=result.get("extracted_entity"),
-        pokemon_id=result.get("retrieved_context", {}).get("id"),
-        flavor_text=result.get("retrieved_context", {}).get("flavor_text"),
-        stats={
-            "hp": result.get("retrieved_context", {}).get("hp"),
-            "attack": result.get("retrieved_context", {}).get("attack"),
-            "defense": result.get("retrieved_context", {}).get("defense"),
-            "sp_atk": result.get("retrieved_context", {}).get("sp_atk"),
-            "sp_def": result.get("retrieved_context", {}).get("sp_def"),
-            "speed": result.get("retrieved_context", {}).get("speed"),
-        },
-        types=result.get("retrieved_context", {}).get("types"),
-        sprite_url=result.get("retrieved_context", {}).get("sprite_url"),
-        graph_relationships=result.get("retrieved_context", {}).get("graph_relationships"),
+        pokemon_id=ctx.get("id"),
+        flavor_text=ctx.get("flavor_text"),
+        stats=stats,
+        types=ctx.get("types"),
+        sprite_url=ctx.get("sprite_url"),
+        graph_relationships=ctx.get("graph_relationships"),
     )
 
     return QueryResponse(

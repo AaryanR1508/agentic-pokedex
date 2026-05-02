@@ -10,7 +10,7 @@ export const ChatWindow = ({ messages, isTyping }) => {
   }, [messages, isTyping]);
 
   return (
-    <div className="h-full flex flex-col p-4 overflow-hidden">
+    <div className="flex-1 flex flex-col p-4 overflow-hidden min-h-0">
       <div className="flex-1 overflow-y-auto pr-2">
         {messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center">

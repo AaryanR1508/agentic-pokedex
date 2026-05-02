@@ -11,6 +11,26 @@ from core.dependencies import get_llm
 llm = get_llm()
 
 
+def _extract_text(content) -> str:
+    """Safely extract a plain string from an LLM response's .content field.
+
+    Newer LangChain / Google GenAI releases can return a list of content
+    blocks (e.g. [{"type": "text", "text": "..."}]) instead of a bare
+    string.  This helper normalises both forms.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict):
+                parts.append(block.get("text", ""))
+        return "".join(parts)
+    return str(content)
+
+
 async def router_node(state: AgentState) -> Dict[str, str]:
     audio = state.get("audio_bytes")
     image = state.get("image_bytes")
@@ -49,7 +69,7 @@ async def audio_handler_node(state: AgentState) -> Dict[str, Any]:
     )
 
     response = llm.invoke([message])
-    pokemon_name = response.content.strip().lower().replace(" ", "")
+    pokemon_name = _extract_text(response.content).strip().lower().replace(" ", "")
 
     driver = neo4j.AsyncGraphDatabase.driver(
         settings.neo4j_uri,
@@ -150,7 +170,7 @@ async def text_handler_node(state: AgentState) -> Dict[str, Any]:
         entity_extract_prompt.format(query=text_query)
     )
 
-    response_text = entity_response.content.strip()
+    response_text = _extract_text(entity_response.content).strip()
     pokemon_name = None
     intent = "details"
 
@@ -232,4 +252,4 @@ Response:"""
 
     response = llm.invoke(formatted_prompt)
 
-    return {"final_response": response.content}
+    return {"final_response": _extract_text(response.content)}

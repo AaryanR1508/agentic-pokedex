@@ -97,7 +97,7 @@ class ChromaSeeder:
         for pokemon in pokemon_list:
             if pokemon.sprite_bytes:
                 ids.append(pokemon.name)
-                img = Image.open(io.BytesIO(pokemon.sprite_bytes))
+                img = Image.open(io.BytesIO(pokemon.sprite_bytes)).convert("RGB")
                 images.append(np.array(img))
                 metadatas.append({
                     "name": pokemon.name,

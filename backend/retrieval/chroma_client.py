@@ -1,7 +1,11 @@
+import io
+
+import numpy as np
+from PIL import Image
 import chromadb
 from chromadb.config import Settings as ChromaSettings
+from chromadb.utils import embedding_functions
 from typing import Optional
-import base64
 
 
 class ChromaClient:
@@ -11,27 +15,32 @@ class ChromaClient:
             port=8000,
             settings=ChromaSettings(anonymized_telemetry=False),
         )
-
-    def search_image(self, image_bytes: bytes) -> Optional[str]:
-        from chromadb.utils import embedding_functions
-
-        openclip_ef = embedding_functions.OpenCLIPEmbeddingFunction(
+        # Load the OpenCLIP model once at construction time so that the
+        # HuggingFace Hub check (and any model download) only happens on
+        # startup, not on every image query.
+        self._openclip_ef = embedding_functions.OpenCLIPEmbeddingFunction(
             model_name="ViT-B-32",
             checkpoint="laion2b_s34b_b79k",
         )
 
+    def search_image(self, image_bytes: bytes) -> Optional[str]:
+        # _encode_image internally calls PIL.Image.fromarray(), which requires
+        # a numpy ndarray — not a PIL Image object.
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+        image_array = np.array(image)
+        embedding = self._openclip_ef._encode_image(image_array)  # list[float]
+
         collection = self.client.get_or_create_collection(
             "pokemon_images",
-            embedding_function=openclip_ef
+            embedding_function=self._openclip_ef,
         )
 
         results = collection.query(
-            images=[image_bytes],
-            n_results=1
+            query_embeddings=[embedding],
+            n_results=1,
         )
 
         if results["ids"] and results["ids"][0]:
-            doc_id = results["ids"][0][0]
             metadata = results["metadatas"][0][0]
             return metadata.get("name")
 

@@ -11,8 +11,8 @@ from retrieval.chroma_client import ChromaClient
 @lru_cache
 def get_llm() -> ChatGoogleGenerativeAI:
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        temperature=0,
+        model="gemini-3-flash-preview",
+        temperature=0.2,
         max_tokens=2048,
     )
 

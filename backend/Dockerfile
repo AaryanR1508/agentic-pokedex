@@ -9,11 +9,19 @@ ENV PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 
+# Pin HuggingFace cache to a predictable path inside the image
+ENV HF_HOME=/app/.cache/huggingface
+
 # Copy dependency files
 COPY pyproject.toml ./
 
 # Sync dependencies instantly
 RUN uv sync
+
+# Pre-download the OpenCLIP model at build time so it is baked into the
+# image layer and never re-fetched on container startup.
+COPY scripts/download_models.py ./scripts/download_models.py
+RUN uv run python scripts/download_models.py
 
 COPY . .
 

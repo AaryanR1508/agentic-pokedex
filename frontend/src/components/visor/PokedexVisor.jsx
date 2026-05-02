@@ -23,11 +23,11 @@ const TYPE_GLOW_COLORS = {
   normal: 'shadow-[0_0_40px_rgba(168,162,158,0.4)]',
 };
 
-export const PokedexVisor = ({ data }) => {
+export const PokedexVisor = ({ data, isSearching }) => {
   const hasData = data && data.pokemon_name;
 
   return (
-    <div className="h-full flex items-center justify-center p-4">
+    <div className="w-full flex items-center justify-center p-4 overflow-y-auto">
       <AnimatePresence mode="wait">
         {hasData ? (
           <motion.div
@@ -114,14 +114,34 @@ export const PokedexVisor = ({ data }) => {
               )}
             </div>
           </motion.div>
-        ) : (
+        ) : isSearching ? (
+          /* Only show the searching indicator when a query is actually in-flight */
           <motion.div
+            key="searching"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             className="text-center p-8"
           >
-            <div className="text-6xl mb-4 opacity-30">📡</div>
-            <p className="text-gray-500">Searching database...</p>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+              className="text-6xl mb-4 opacity-50 inline-block"
+            >
+              📡
+            </motion.div>
+            <p className="text-gray-400">Searching database…</p>
+          </motion.div>
+        ) : (
+          /* Idle — no data yet and no query running */
+          <motion.div
+            key="idle"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center p-8 select-none"
+          >
+            <div className="text-5xl mb-3 opacity-10">🔍</div>
+            <p className="text-gray-700 text-sm">Results will appear here</p>
           </motion.div>
         )}
       </AnimatePresence>
